@@ -78,7 +78,7 @@ document.addEventListener('DOMContentLoaded', function () {
      */
     function updateDashboardStats(data) {
         const totalAlunos = data.length;
-        const presentes = data.filter(a => a.status_presenca === 'Presente').length;
+        const presentes = data.filter(a => a.status_presenca !== 'Ausente').length;
         const ausentes = totalAlunos - presentes;
         const totalTurmas = [...new Set(data.map(aluno => aluno.nome_turma || 'Sem Turma'))].length;
 
@@ -230,26 +230,44 @@ document.addEventListener('DOMContentLoaded', function () {
                             ${canViewSensitiveData ? '<th>RA</th>' : ''}
                             <th>Nome</th>
                             <th>Status</th>
-                            <th>Último Registro</th>
+                            <th>Entrada</th>
+                            <th>Saída</th>
                             <th>Ações</th>
                         </tr>
                     </thead> 
                     <tbody>
-                        ${groupedByTurma[turma].map(aluno => `
+                        ${groupedByTurma[turma].map(aluno => {
+                            let statusBadgeClass = 'bg-danger'; // Padrão para 'Ausente'
+                            switch (aluno.status_presenca) {
+                                case 'Presente':
+                                    statusBadgeClass = 'bg-success';
+                                    break;
+                                case 'Apenas Entrada':
+                                    statusBadgeClass = 'bg-info text-dark';
+                                    break;
+                                case 'Atraso':
+                                case 'Saída Antecipada':
+                                case 'Presente (Incompleto)':
+                                    statusBadgeClass = 'bg-warning text-dark';
+                                    break;
+                            }
+
+                            return `
                             <tr>
                                 ${canViewSensitiveData ? `<td data-label="RA"><a href="/aluno/${aluno.ra}">${aluno.ra}</a></td>` : ''}
                                 <td>${aluno.nome}</td>
                                 <td>
-                                    <span class="badge ${aluno.status_presenca === 'Presente' ? 'bg-success' : 'bg-danger'}">
+                                    <span class="badge ${statusBadgeClass}">
                                         ${aluno.status_presenca}
                                     </span>
                                 </td>
-                                <td>${aluno.timestamp ? new Date(aluno.timestamp).toLocaleString('pt-BR') : 'N/A'}</td>
+                                <td>${aluno.timestamp_entrada ? new Date(aluno.timestamp_entrada).toLocaleTimeString('pt-BR') : 'N/A'}</td>
+                                <td>${aluno.timestamp_saida ? new Date(aluno.timestamp_saida).toLocaleTimeString('pt-BR') : 'N/A'}</td>
                                 <td>
                                     ${userRole === 'professor' ? `<a href="/aluno/${aluno.ra}" class="btn btn-sm btn-info">Ver Histórico</a>` : ''}
                                 </td>
                             </tr>
-                        `).join('')}
+                        `}).join('')}
                     </tbody>
                 </table>
             `;

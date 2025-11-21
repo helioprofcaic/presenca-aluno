@@ -31,15 +31,19 @@ class PaginaCadastro:
         self.id_entry = ctk.CTkEntry(form_frame, width=250)
         self.id_entry.grid(row=1, column=1, padx=10, pady=10, sticky="ew")
 
-        ctk.CTkLabel(form_frame, text="Código da Turma:").grid(row=2, column=0, padx=10, pady=10, sticky="w")
+        ctk.CTkLabel(form_frame, text="INEP do Aluno (Opcional):").grid(row=2, column=0, padx=10, pady=10, sticky="w")
+        self.inep_entry = ctk.CTkEntry(form_frame, width=250)
+        self.inep_entry.grid(row=2, column=1, padx=10, pady=10, sticky="ew")
+
+        ctk.CTkLabel(form_frame, text="Código da Turma:").grid(row=3, column=0, padx=10, pady=10, sticky="w")
         self.turma_entry = ctk.CTkEntry(form_frame, width=250)
-        self.turma_entry.grid(row=2, column=1, padx=10, pady=10, sticky="ew")
+        self.turma_entry.grid(row=3, column=1, padx=10, pady=10, sticky="ew")
 
         self.register_button = ctk.CTkButton(form_frame, text="Cadastrar e Gerar QR Code", command=self.register_student)
-        self.register_button.grid(row=3, column=0, columnspan=2, padx=10, pady=20)
+        self.register_button.grid(row=4, column=0, columnspan=2, padx=10, pady=20)
         
         self.register_status_label = ctk.CTkLabel(form_frame, text="", font=ctk.CTkFont(size=14))
-        self.register_status_label.grid(row=4, column=0, columnspan=2, padx=10, pady=5)
+        self.register_status_label.grid(row=5, column=0, columnspan=2, padx=10, pady=5)
 
         # --- Visualizador de QR Code ---
         qr_frame = ctk.CTkFrame(self.tab)
@@ -57,10 +61,11 @@ class PaginaCadastro:
         """Cadastra um novo aluno e gera seu QR code."""
         nome = self.nome_entry.get().strip()
         ra = self.id_entry.get().strip()
+        inep = self.inep_entry.get().strip() or None # Converte string vazia para None
         codigo_turma = self.turma_entry.get().strip()
 
         if not nome or not ra or not codigo_turma:
-            self.register_status_label.configure(text="Nome, RA e Código da Turma são obrigatórios.", text_color="red")
+            self.register_status_label.configure(text="Nome, RA e Código da Turma são obrigatórios.", text_color="red") # INEP é opcional
             return
         
         if codigo_turma not in self.app.class_codes:
@@ -69,7 +74,7 @@ class PaginaCadastro:
 
         try:
             # A lógica de cadastro do aluno no banco de dados
-            new_student_id = db.add_student(ra, nome, codigo_turma)
+            new_student_id = db.add_student(ra, nome, codigo_turma, inep=inep)
             if new_student_id:
                 self.register_status_label.configure(text=f"Aluno '{nome}' cadastrado com sucesso!", text_color="green")
                 self.last_registered_ra = ra
@@ -78,9 +83,10 @@ class PaginaCadastro:
                 # Limpa os campos de entrada após o sucesso
                 self.nome_entry.delete(0, 'end')
                 self.id_entry.delete(0, 'end')
+                self.inep_entry.delete(0, 'end')
                 self.turma_entry.delete(0, 'end')
             else:
-                self.register_status_label.configure(text="RA de aluno já cadastrado.", text_color="orange")
+                self.register_status_label.configure(text="RA ou INEP de aluno já cadastrado.", text_color="orange")
                 # Não limpa os campos para que o usuário possa corrigir
                 return
         except Exception as e:

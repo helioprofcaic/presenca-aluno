@@ -99,3 +99,34 @@ ctk_img = ctk.CTkImage(light_image=img, size=(width, height))
 # Usa o objeto CTkImage no widget
 self.video_label.configure(image=ctk_img)
 ```
+
+## 4. Erro: A Câmera Não Inicia ou Trava (Windows)
+
+### Sintomas
+
+Ao tentar iniciar a câmera na aba "Ler QR Code", a aplicação pode travar ou o vídeo não aparece. O terminal exibe erros como:
+
+```
+[ERROR:1@...] global obsensor_uvc_stream_channel.cpp:163 cv::obsensor::getStreamChannelGroup Camera index out of range
+[ WARN:2@...] global cap.cpp:459 cv::VideoCapture::open VIDEOIO(DSHOW): raised unknown C++ exception!
+```
+
+### Causa
+
+Este erro geralmente ocorre no Windows e indica um conflito entre o backend de captura de vídeo padrão do OpenCV (`DSHOW` - DirectShow) e os drivers da câmera instalados no sistema. O `DSHOW` é um framework mais antigo e pode ser instável com drivers mais modernos.
+
+### Solução
+
+A solução é forçar o OpenCV a usar um backend mais moderno e estável, o `MSMF` (Media Foundation).
+
+1.  **Abra o arquivo `desktop/main.py`**.
+2.  **Localize a função `video_stream_worker`**.
+3.  **Modifique a linha que inicializa a câmera** para incluir `cv2.CAP_MSMF`:
+
+    ```python
+    # Altere 'self.cap = cv2.VideoCapture(0)' para:
+    self.cap = cv2.VideoCapture(0, cv2.CAP_MSMF)
+    ```
+
+Essa pequena alteração instrui o OpenCV a usar um método de comunicação diferente com a câmera, resolvendo a maioria dos problemas de inicialização e travamento no Windows.
+```

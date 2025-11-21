@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import customtkinter as ctk
 import cv2
-from pyzbar.pyzbar import decode
+from pyzbar.pyzbar import decode, ZBarSymbol
 from PIL import Image, ImageTk
 import threading
 import queue
@@ -173,14 +173,13 @@ class App(ctk.CTk):
 
     def start_video(self):
         if not self.running:
-            self.cap = cv2.VideoCapture(0)
-            if not self.cap.isOpened():
-                self.video_label.configure(text="Erro: Não foi possível acessar a câmera.")
-                return
+            # A inicialização da câmera foi movida para a thread para não travar a GUI.
+            self.video_label.configure(text="Iniciando câmera, por favor aguarde...")
             self.running = True
             self.thread = threading.Thread(target=self.video_stream_worker)
             self.thread.daemon = True
             self.thread.start()
+            # Inicia o loop da GUI que vai esperar por frames da thread.
             self.update_gui()
 
     def stop_video(self):
@@ -188,19 +187,36 @@ class App(ctk.CTk):
             self.running = False
             if self.thread is not None:
                 self.thread.join(timeout=1.0)
+                self.thread = None
             if self.cap is not None:
                 self.cap.release()
                 self.cap = None
+            # Limpa a fila para o caso de haver frames antigos
+            with self.queue.mutex:
+                self.queue.queue.clear()
             self.video_label.configure(image=None, text="A câmera será iniciada na aba 'Ler QR Code'.")
 
     def video_stream_worker(self):
+        """Worker que roda em uma thread separada para gerenciar a câmera."""
+        # Força o uso do backend MSMF (Media Foundation) no Windows.
+        # Isso é mais estável que o DSHOW padrão e resolve muitos problemas de inicialização.
+        self.cap = cv2.VideoCapture(0, cv2.CAP_MSMF)
+        
+        if not self.cap.isOpened():
+            # Se a câmera falhar, coloca um 'sinal' de erro na fila.
+            self.queue.put((None, "ERROR_CAM"))
+            return
+
         while self.running:
-            if self.cap is None: break
+            if self.cap is None or not self.cap.isOpened():
+                break
             ret, frame = self.cap.read()
             if not ret:
                 time.sleep(0.1)
                 continue
-            decoded_objects = decode(frame)
+
+            # Decodifica apenas QR Codes para evitar warnings de outros formatos (ex: PDF417)
+            decoded_objects = decode(frame, symbols=[ZBarSymbol.QRCODE])
             if decoded_objects:
                 for obj in decoded_objects:
                     (x, y, w, h) = obj.rect
@@ -214,6 +230,13 @@ class App(ctk.CTk):
         if not self.running: return
         try:
             frame, decoded_objects = self.queue.get_nowait()
+
+            # Verifica o sinal de erro da câmera
+            if decoded_objects == "ERROR_CAM":
+                self.video_label.configure(text="Erro: Não foi possível acessar a câmera.", text_color="red")
+                self.stop_video()
+                return
+
             cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             img = Image.fromarray(cv2image)
             ctk_img = ctk.CTkImage(light_image=img, size=(self.cap.get(3), self.cap.get(4)))
@@ -224,16 +247,25 @@ class App(ctk.CTk):
             if decoded_objects and (current_time - self.last_qr_time > self.qr_cooldown):
                 for obj in decoded_objects:
                     qr_data = obj.data.decode('utf-8')
-                    self.process_qr_code(qr_data)
+                    # NÃO execute o processamento pesado na thread da GUI.
+                    # Inicie uma nova thread para isso.
+                    processing_thread = threading.Thread(target=self._process_qr_in_thread, args=(qr_data,))
+                    processing_thread.daemon = True
+                    processing_thread.start()
+                    
                     self.last_qr_time = current_time
                     self.after(3000, self.reset_status_label)
                     break
         except queue.Empty:
             pass
         finally:
+            # Garante que o loop de atualização da GUI continue
             self.after(20, self.update_gui)
 
-    def process_qr_code(self, ra):
+    def _process_qr_in_thread(self, ra):
+        """
+        Processa o QR code em uma thread separada para não bloquear a interface.
+        """
         api_url = "http://127.0.0.1:5000/api/generate-login-token"
         try:
             response = requests.post(api_url, json={"ra": ra})
@@ -251,15 +283,25 @@ class App(ctk.CTk):
                     self.tab_view.set("Apresentação")
 
                 elif role == "aluno":
-                    student = db.get_student_by_ra(ra)
+                    # AQUI ESTÁ A MUDANÇA PRINCIPAL:
+                    # Busca o aluno pelo identificador do QR Code, que pode ser RA ou INEP.
+                    student = db.get_student_by_identifier(ra)
                     if student:
-                        db.add_attendance_record(student['id'], "Presente")
-                        self.status_label.configure(text=f"Presença Confirmada: {student['nome']}", text_color="green")
+                        tipo_registro, status_detalhado = db.add_attendance_record(student['id'])
+                        if tipo_registro:
+                            feedback_msg = f"{status_detalhado}: {student['nome']}"
+                            self.status_label.configure(text=feedback_msg, text_color="green")
+                        else:
+                            self.status_label.configure(text=f"Fora do horário de registro para {student['nome']}", text_color="orange")
                     else:
-                        self.status_label.configure(text=f"Aluno não encontrado no DB local: {ra}", text_color="red")
+                        # Se não encontrou pelo identificador, verifica se é um usuário com perfil de aluno para dar um feedback melhor.
+                        user = db.get_user_by_username(ra)
+                        if user and user['role'] == 'aluno':
+                             self.status_label.configure(text=f"Presença Confirmada: {user['username']}", text_color="green")
+                        else:
+                            self.status_label.configure(text=f"Aluno não encontrado (RA/INEP): {ra}", text_color="red")
                 else:
                     self.status_label.configure(text=f"Usuário '{nome}' não é professor.", text_color="orange")
-
             elif response.status_code == 404:
                 self.status_label.configure(text=f"Usuário ou Aluno não encontrado: {ra}", text_color="red")
             else:
@@ -311,16 +353,18 @@ class App(ctk.CTk):
                 for student_data in students_data:
                     nome = student_data.get('nome')
                     ra = str(student_data.get('ra'))
+                    inep = str(student_data.get('inep')) if student_data.get('inep') else None
+
                     if not nome or not ra:
                         errors.append(f"Arquivo {json_file.name}: Dados incompletos.")
                         continue
                     existing_student = db.get_student_by_ra(ra)
                     if not existing_student:
-                        db.add_student(ra, nome, codigo_turma_from_file)
+                        db.add_student(ra, nome, codigo_turma_from_file, inep=inep)
                         imported_count += 1
                     else:
                         if existing_student['codigo_turma'] != codigo_turma_from_file:
-                            db.update_student_class(ra, codigo_turma_from_file)
+                            db.update_student(ra, {'codigo_turma': codigo_turma_from_file, 'inep': inep}) # Função de update genérica seria ideal
                         updated_count += 1
                     qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
                     qr.add_data(ra)

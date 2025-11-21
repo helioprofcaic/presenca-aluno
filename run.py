@@ -63,13 +63,14 @@ def populate_students_if_empty():
             for student_data in students_data:
                 nome = student_data.get('nome')
                 ra = str(student_data.get('ra'))
+                inep = str(student_data.get('inep')) if student_data.get('inep') else None
 
                 if not nome or not ra:
                     errors.append(f"Dados incompletos no arquivo {json_file.name}")
                     continue
                 
                 # Adiciona o aluno à tabela 'alunos'
-                student_id = db.add_student(ra, nome, codigo_turma_from_file)
+                student_id = db.add_student(ra, nome, codigo_turma_from_file, inep=inep)
                 # Cria também um usuário para o aluno poder logar, com o RA como senha padrão
                 db.add_user(ra, ra, "aluno")
                 imported_count += 1

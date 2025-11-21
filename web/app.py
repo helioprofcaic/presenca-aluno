@@ -254,7 +254,7 @@ def generate_login_token():
         return jsonify({"role": "aluno", "nome": user['username']})
     else:
         # Se não for um usuário, verifica se é um aluno para dar a presença.
-        student = db.get_student_by_ra(ra)
+        student = db.get_student_by_identifier(ra)
         if student:
             return jsonify({"role": "aluno", "nome": student['nome']})
         else:

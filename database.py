@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import sqlite3
 import os
-from datetime import datetime
+from datetime import datetime, time, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 
 DB_FILE = "presenca.db"
@@ -29,6 +29,7 @@ def init_db():
         CREATE TABLE alunos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             ra TEXT UNIQUE NOT NULL,
+            inep TEXT UNIQUE,
             nome TEXT NOT NULL,
             codigo_turma TEXT
         )""")
@@ -42,7 +43,7 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             aluno_id INTEGER NOT NULL,
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-            status TEXT NOT NULL,
+            tipo_registro TEXT NOT NULL, -- 'entrada' ou 'saida'
             FOREIGN KEY (aluno_id) REFERENCES alunos (id)
         )""")
 
@@ -120,14 +121,14 @@ def check_user_password(hashed_password, password):
     """Verifica se a senha fornecida corresponde à senha hash."""
     return check_password_hash(hashed_password, password)
 
-def add_student(ra, nome, codigo_turma):
+def add_student(ra, nome, codigo_turma, inep=None):
     """Adiciona um novo aluno ao banco de dados."""
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
         cursor.execute(
-            "INSERT INTO alunos (ra, nome, codigo_turma) VALUES (?, ?, ?)",
-            (ra, nome, codigo_turma)
+            "INSERT INTO alunos (ra, nome, codigo_turma, inep) VALUES (?, ?, ?, ?)",
+            (ra, nome, codigo_turma, inep)
         )
         conn.commit()
         return cursor.lastrowid
@@ -145,48 +146,116 @@ def get_student_by_ra(ra):
     conn.close()
     return student
 
-def add_attendance_record(aluno_id, status):
-    """Adiciona um registro de presença para um aluno."""
+def get_student_by_identifier(identifier):
+    """Busca um aluno pelo RA ou pelo INEP."""
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO presenca (aluno_id, status, timestamp) VALUES (?, ?, ?)",
-        (aluno_id, status, datetime.now())
-    )
-    conn.commit()
+    # Tenta encontrar pelo RA primeiro, depois pelo INEP.
+    student = conn.execute(
+        'SELECT * FROM alunos WHERE ra = ? OR inep = ?', (identifier, identifier)
+    ).fetchone()
     conn.close()
+    return student
 
-def get_all_students_with_latest_attendance():
+# --- Constantes de Horário ---
+HORA_ENTRADA_PADRAO = time(7, 20)
+HORA_SAIDA_PADRAO = time(16, 20)
+TOLERANCIA_MINUTOS = timedelta(minutes=20)
+
+def add_attendance_record(aluno_id):
     """
-    Busca todos os alunos e o status da última presença registrada para cada um.
+    Adiciona um registro de entrada ou saída para um aluno com base no horário.
+    Retorna uma tupla (tipo_registro, status_detalhado).
+    Ex: ('entrada', 'Entrada no horário') ou ('saida', 'Saída Antecipada')
     """
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    query = """
-    WITH LatestPresence AS (
-        SELECT
-            aluno_id,
-            status,
-            timestamp,
-            ROW_NUMBER() OVER(PARTITION BY aluno_id ORDER BY timestamp DESC) as rn
-        FROM presenca
-    )
+    agora = datetime.now()
+    hora_atual = agora.time()
+    hoje_inicio_dia = agora.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # Define as janelas de tempo
+    inicio_janela_entrada = (datetime.combine(agora.date(), HORA_ENTRADA_PADRAO) - TOLERANCIA_MINUTOS).time()
+    fim_janela_entrada = (datetime.combine(agora.date(), HORA_ENTRADA_PADRAO) + TOLERANCIA_MINUTOS).time()
+    inicio_janela_saida = (datetime.combine(agora.date(), HORA_SAIDA_PADRAO) - TOLERANCIA_MINUTOS).time()
+    
+    tipo_registro = None
+    status_detalhado = "Horário Inválido"
+
+    # Lógica para determinar se é entrada ou saída
+    if hora_atual < fim_janela_entrada:
+        tipo_registro = 'entrada'
+        status_detalhado = "Entrada no horário" if hora_atual <= fim_janela_entrada else "Entrada com Atraso"
+    elif hora_atual >= inicio_janela_saida:
+        tipo_registro = 'saida'
+        status_detalhado = "Saída no horário" if hora_atual >= inicio_janela_saida else "Saída Antecipada"
+
+    if tipo_registro:
+        # Deleta registros anteriores do mesmo tipo no mesmo dia para garantir apenas o último
+        cursor.execute(
+            "DELETE FROM presenca WHERE aluno_id = ? AND tipo_registro = ? AND timestamp >= ?",
+            (aluno_id, tipo_registro, hoje_inicio_dia)
+        )
+        # Insere o novo registro
+        cursor.execute(
+            "INSERT INTO presenca (aluno_id, tipo_registro, timestamp) VALUES (?, ?, ?)",
+            (aluno_id, tipo_registro, agora)
+        )
+        conn.commit()
+
+    conn.close()
+    return tipo_registro, status_detalhado
+
+def get_all_students_with_latest_attendance():
+    """
+    Busca todos os alunos e calcula o status de presença com base nos registros de entrada e saída do dia.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Define os horários de referência para a consulta SQL
+    fim_entrada_tolerancia = (datetime.combine(datetime.today(), HORA_ENTRADA_PADRAO) + TOLERANCIA_MINUTOS).time().strftime('%H:%M:%S')
+    inicio_saida_tolerancia = (datetime.combine(datetime.today(), HORA_SAIDA_PADRAO) - TOLERANCIA_MINUTOS).time().strftime('%H:%M:%S')
+
+    query = f"""
     SELECT
         a.ra,
         a.nome,
         a.codigo_turma,
-        COALESCE(lp.status, 'Ausente') as status_presenca,
-        lp.timestamp
+        CASE
+            -- Cenário ideal: Entrada e Saída corretas
+            WHEN entrada.id IS NOT NULL AND saida.id IS NOT NULL AND TIME(entrada.timestamp) <= '{fim_entrada_tolerancia}' AND TIME(saida.timestamp) >= '{inicio_saida_tolerancia}' THEN 'Presente'
+            -- Saída antecipada
+            WHEN entrada.id IS NOT NULL AND saida.id IS NOT NULL AND TIME(saida.timestamp) < '{inicio_saida_tolerancia}' THEN 'Saída Antecipada'
+            -- Chegou atrasado, mas saiu no horário
+            WHEN entrada.id IS NOT NULL AND saida.id IS NOT NULL AND TIME(entrada.timestamp) > '{fim_entrada_tolerancia}' THEN 'Atraso'
+            -- Apenas entrou, mas ainda não deu o horário de saída
+            WHEN entrada.id IS NOT NULL AND saida.id IS NULL AND TIME('now', 'localtime') < '{inicio_saida_tolerancia}' THEN 'Apenas Entrada'
+            -- Apenas entrou, mas já passou do horário de saída (esqueceu de registrar saída)
+            WHEN entrada.id IS NOT NULL AND saida.id IS NULL AND TIME('now', 'localtime') >= '{inicio_saida_tolerancia}' THEN 'Presente (Incompleto)'
+            ELSE 'Ausente'
+        END as status_presenca,
+        entrada.timestamp as timestamp_entrada,
+        saida.timestamp as timestamp_saida
     FROM
         alunos a
-    LEFT JOIN
-        LatestPresence lp ON a.id = lp.aluno_id AND lp.rn = 1
+    LEFT JOIN (
+        SELECT aluno_id, id, MAX(timestamp) as timestamp FROM presenca
+        WHERE tipo_registro = 'entrada' AND DATE(timestamp) = DATE('now', 'localtime')
+        GROUP BY aluno_id
+    ) entrada ON a.id = entrada.aluno_id
+    LEFT JOIN (
+        SELECT aluno_id, id, MAX(timestamp) as timestamp FROM presenca
+        WHERE tipo_registro = 'saida' AND DATE(timestamp) = DATE('now', 'localtime')
+        GROUP BY aluno_id
+    ) saida ON a.id = saida.aluno_id
     ORDER BY
         a.nome;
     """
 
-    cursor.execute(query)
+    cursor.execute(
+        query
+    )
     students = cursor.fetchall()
     conn.close()
     student_list = [dict(row) for row in students]
@@ -222,6 +291,29 @@ def update_student_class(ra, codigo_turma):
         "UPDATE alunos SET codigo_turma = ? WHERE ra = ?",
         (codigo_turma, ra)
     )
+    conn.commit()
+    updated_rows = cursor.rowcount
+    conn.close()
+    return updated_rows > 0
+    
+def update_student(ra, data_dict):
+    """
+    Atualiza os dados de um aluno de forma genérica.
+    'data_dict' é um dicionário com as colunas a serem atualizadas.
+    Ex: {'codigo_turma': 'nova_turma', 'inep': '123'}
+    """
+    if not data_dict:
+        return False
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    set_clause = ", ".join([f"{key} = ?" for key in data_dict.keys()])
+    values = list(data_dict.values())
+    values.append(ra)
+
+    query = f"UPDATE alunos SET {set_clause} WHERE ra = ?"
+    cursor.execute(query, tuple(values))
     conn.commit()
     updated_rows = cursor.rowcount
     conn.close()
