@@ -3,7 +3,9 @@
 Uma solução integrada que combina uma **aplicação de desktop** para registro de presença e uma **interface web** para visualização de dados e gerenciamento. Construído com Python, CustomTkinter e Flask.
 
 ![Demonstração da Interface Web](./docs/tela_visitante.png)
-
+*Interface Web para visualização e gerenciamento.*
+![Demonstração da Aplicação Desktop](./docs/tela_desktop.png)
+*Aplicação Desktop para registro de presença via QR Code.*
 ---
 
 ## 📚 Documentação Completa
