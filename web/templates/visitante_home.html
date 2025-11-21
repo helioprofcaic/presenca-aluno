@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bem-vindo ao Sistema de Presença</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .hero {
+            background-color: #343a40;
+            color: white;
+            padding: 4rem 2rem;
+            border-radius: 0.3rem;
+        }
+        .card-icon {
+            font-size: 3rem;
+            color: #0d6efd;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('index') }}">Sistema de Presença</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">Ver Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="https://github.com/seu-usuario/presenca-aluno/blob/main/docs/Como_usar.md" target="_blank">Documentação</a></li>
+                    <li class="nav-item"><a class="nav-link" href="https://github.com/seu-usuario/presenca-aluno" target="_blank">Código Fonte</a></li>
+                </ul>
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link btn btn-outline-primary" href="{{ url_for('login') }}">Login</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="hero text-center">
+            <h1 class="display-4">Sistema de Registro de Presença com QR Code</h1>
+            <p class="lead">Uma solução moderna e eficiente para otimizar a gestão de presença em ambientes educacionais.</p>
+        </div>
+
+        <div class="alert alert-info text-center mt-4 p-4">
+            <h4 class="alert-heading">Explore nosso Dashboard!</h4>
+            <p>Quer ver o sistema em ação? Faça o login como visitante para ter acesso a um dashboard interativo com gráficos e listas de alunos de exemplo.</p>
+            <hr>
+            <p class="mb-0">Use as credenciais: <strong>usuário:</strong> `visitante` / <strong>senha:</strong> `visitante`</p>
+            <a href="{{ url_for('login') }}" class="btn btn-primary mt-3">Acessar Dashboard de Demonstração</a>
+        </div>
+
+        <div class="row text-center mt-5">
+            <div class="col-md-4">
+                <div class="card h-100"><div class="card-body"><div class="card-icon mb-3">✓</div><h5 class="card-title">Para Professores</h5><p class="card-text">Agilize a chamada, acompanhe a frequência em tempo real e gere relatórios com facilidade. Dedique mais tempo ao que realmente importa: o ensino.</p></div></div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100"><div class="card-body"><div class="card-icon mb-3">🏫</div><h5 class="card-title">Para a Escola</h5><p class="card-text">Modernize processos, reduza o uso de papel e obtenha dados consolidados sobre a frequência para tomar decisões mais estratégicas.</p></div></div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100"><div class="card-body"><div class="card-icon mb-3">🎓</div><h5 class="card-title">Para Alunos</h5><p class="card-text">Permite que os alunos acessem seu próprio histórico de presença de forma transparente, incentivando a responsabilidade e o engajamento.</p></div></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+</body>
+</html>

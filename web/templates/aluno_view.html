@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minha Presença</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('index') }}">Sistema de Presença</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    {% if session.username %}
+                        <li class="nav-item">
+                            <span class="nav-link text-light">Olá, {{ session.username }} ({{ session.role }})</span>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link btn btn-outline-light ms-2" href="{{ url_for('logout') }}">Sair</a>
+                        </li>
+                    {% else %}
+                        <li class="nav-item"><a class="nav-link btn btn-outline-primary" href="{{ url_for('login') }}">Login</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div id="flash-container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        <h1 class="mb-4">Meu Status de Presença</h1>
+
+        <div id="student-data-container">
+            <!-- Os dados do aluno serão inseridos aqui pelo JavaScript -->
+        </div>
+        <div class="alert alert-warning mt-3" role="alert" id="no-data-alert" style="display: none;">
+            Nenhum dado de presença encontrado.
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function () {
+            const apiBaseUrl = "{{ api_base_url }}";
+            try {
+                const response = await fetch(`${apiBaseUrl}/api/presence_data`);
+                if (!response.ok) throw new Error('Falha ao buscar dados.');
+                
+                const data = await response.json();
+                const container = document.getElementById('student-data-container');
+                const noDataAlert = document.getElementById('no-data-alert');
+
+                if (data.length > 0) {
+                    const aluno = data[0]; // Aluno logado só recebe seus próprios dados
+                    const statusClass = aluno.status_presenca === 'Presente' ? 'bg-success' : 'bg-danger';
+                    const timestamp = aluno.timestamp ? new Date(aluno.timestamp).toLocaleString('pt-BR') : 'N/A';
+
+                    container.innerHTML = `
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>${aluno.nome}</h3>
+                            </div>
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item"><strong>RA:</strong> ${aluno.ra}</li>
+                                <li class="list-group-item"><strong>Turma:</strong> ${aluno.codigo_turma || 'Não definida'}</li>
+                                <li class="list-group-item"><strong>Status Atual:</strong> <span class="badge ${statusClass}">${aluno.status_presenca}</span></li>
+                                <li class="list-group-item"><strong>Último Registro:</strong> ${timestamp}</li>
+                                <li class="list-group-item"><a href="/aluno/${aluno.ra}" class="btn btn-primary">Ver Meu Histórico Completo</a></li>
+                            </ul>
+                        </div>
+                    `;
+                } else {
+                    noDataAlert.style.display = 'block';
+                }
+            } catch (error) {
+                console.error("Erro ao carregar dados do aluno:", error);
+                document.getElementById('no-data-alert').textContent = 'Erro ao carregar seus dados.';
+                document.getElementById('no-data-alert').style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

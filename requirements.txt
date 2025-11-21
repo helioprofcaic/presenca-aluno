@@ -1,0 +1,10 @@
+customtkinter
+opencv-python
+pyzbar
+pandas
+qrcode
+Pillow
+Flask
+pandas
+pathlib
+requests

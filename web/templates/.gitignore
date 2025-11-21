@@ -1,0 +1,24 @@
+# Ambiente Virtual
+.venv/
+venv/
+
+# Arquivos de cache do Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Banco de dados
+*.db
+*.sqlite3
+
+# Arquivos gerados
+qrcodes/
+data/turmas/*
+
+# Arquivos de IDE
+.vscode/
+.idea/
+
+# Arquivos legados ou de dados locais
+*.csv

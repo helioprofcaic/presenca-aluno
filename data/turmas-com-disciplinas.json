@@ -1,0 +1,62 @@
+[
+    {
+        "codigoTurma": "294815",
+        "nomeTurma": "EF INT-8º ANO-I-A",
+        "disciplinas": [
+            {"codigoDisciplina": "COMPUTACAO", "nomeDisciplina": "COMPUTAÇAO"}
+        ]
+    },
+    {
+        "codigoTurma": "294816",
+        "nomeTurma": "EF INT-8º ANO-I-B",
+        "disciplinas": [
+            {"codigoDisciplina": "COMPUTACAO", "nomeDisciplina": "COMPUTAÇAO"}
+        ]
+    },
+    {
+        "codigoTurma": "294820",
+        "nomeTurma": "EF INT-9º ANO-I-A",
+        "disciplinas": [
+            {"codigoDisciplina": "COMPUTACAO", "nomeDisciplina": "COMPUTAÇAO"}
+        ]
+    },
+    {
+        "codigoTurma": "294821",
+        "nomeTurma": "EF INT-9º ANO-I-B",
+        "disciplinas": [
+            {"codigoDisciplina": "COMPUTACAO", "nomeDisciplina": "COMPUTAÇAO"}
+        ]
+    },
+    {
+        "codigoTurma": "297513",
+        "nomeTurma": "EMI-INT CT DES SIST-1ª SÉRIE -I-A",
+        "disciplinas": [
+            {"codigoDisciplina": "ADMINISTRACAO_BANCO_DADOS", "nomeDisciplina": "ADMINISTRAÇÃO DE BANCO DE DADOS"},
+            {"codigoDisciplina": "FUNDAMENTOS_TI", "nomeDisciplina": "FUNDAMENTOS DA TECNOLOGIA DA INFORMAÇÃO"},
+            {"codigoDisciplina": "FUNDAMENTOS_BD", "nomeDisciplina": "FUNDAMENTOS DE BANCO DE DADOS"},
+            {"codigoDisciplina": "FUNDAMENTOS_REDES", "nomeDisciplina": "FUNDAMENTOS DE REDES DE COMPUTADORES"},
+            {"codigoDisciplina": "MENTORIAS_TEC_DES_SIST", "nomeDisciplina": "MENTORIAS TEC"},
+            {"codigoDisciplina": "METODOS_AGEIS", "nomeDisciplina": "MÉTODOS ÁGEIS DE DESENVOLVIMENTO"},
+            {"codigoDisciplina": "PENSAMENTO_COMPUTACIONAL_DES_SIST", "nomeDisciplina": "PENSAMENTO COMPUTACIONAL"},
+            {"codigoDisciplina": "TECNOLOGIAS_AVA_METODOS_DES_SIST", "nomeDisciplina": "TECNOLOGIAS, AVA E MÉTODOS DE APRENDIZAGEM"},
+            {"codigoDisciplina": "ARQUITETURA_COMPUTADORES", "nomeDisciplina": "ARQUITETURA DE COMPUTADORES"},
+            {"codigoDisciplina": "LOGICA_PROGRAMACAO_DES_SIST", "nomeDisciplina": "LÓGICA DE PROGRAMAÇÃO"}
+        ]
+    },
+    {
+        "codigoTurma": "297135",
+        "nomeTurma": "EMI-INT CT PROG JOG DIGI-1ª SÉRIE -I-A",
+        "disciplinas": [
+            {"codigoDisciplina": "ANIMACAO_2D", "nomeDisciplina": "ANIMAÇÃO 2D"},
+            {"codigoDisciplina": "FUNDAMENTOS_JOGOS", "nomeDisciplina": "FUNDAMENTOS DE JOGOS DIGITAIS"},
+            {"codigoDisciplina": "GAME_DESIGN", "nomeDisciplina": "GAME DESIGN, ROTEIRIZAÇÃO E CRIAÇÃO DE PERSONAGENS"},
+            {"codigoDisciplina": "INTERFACE_JOGOS", "nomeDisciplina": "INTERFACE PARA JOGOS"},
+            {"codigoDisciplina": "MENTORIAS_TEC_JOGOS", "nomeDisciplina": "MENTORIAS TEC"},
+            {"codigoDisciplina": "PENSAMENTO_COMPUTACIONAL_JOGOS", "nomeDisciplina": "PENSAMENTO COMPUTACIONAL"},
+            {"codigoDisciplina": "PROGRAMACAO_JOGOS_I", "nomeDisciplina": "PROGRAMAÇÃO DE JOGOS I"},
+            {"codigoDisciplina": "PROGRAMACAO_JOGOS_II", "nomeDisciplina": "PROGRAMAÇÃO DE JOGOS II"},
+            {"codigoDisciplina": "TECNOLOGIAS_AVA_METODOS_JOGOS", "nomeDisciplina": "TECNOLOGIAS, AVA E MÉTODOS DE APRENDIZAGEM"},
+            {"codigoDisciplina": "LOGICA_PROGRAMACAO_JOGOS", "nomeDisciplina": "LÓGICA DE PROGRAMAÇÃO"}
+        ]
+    }
+]

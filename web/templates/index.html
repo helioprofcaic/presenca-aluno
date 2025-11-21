@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Status de Presença</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body id="page-body" 
+      style="visibility: hidden;" 
+      data-user-role="{{ user_role or 'visitante' }}" 
+      data-api-base-url="{{ api_base_url }}"
+      data-can-view-sensitive-data="{{ can_view_sensitive_data|lower }}">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('index') }}">Sistema de Presença</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                {% if session.role == 'admin' %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('manage_users') }}">Gerenciar Usuários</a></li>
+                {% endif %}
+                </ul>
+                <ul class="navbar-nav ms-auto">
+                    {% if session.username %}
+                        <li class="nav-item">
+                            <span class="nav-link text-light">Olá, {{ session.username }} ({{ session.role }})</span>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link btn btn-outline-light ms-2" href="{{ url_for('logout') }}">Sair</a>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link btn btn-outline-primary" href="{{ url_for('login') }}">Login</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div id="flash-container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        <h1 class="mb-4">Dashboard de Presença</h1>
+
+        <!-- Seção de Estatísticas -->
+        <div class="row mb-4">
+            <div class="col-md-6 col-lg-3 mb-3">
+                <div class="card text-white bg-primary h-100">
+                    <div class="card-body"><h5 class="card-title">Total de Alunos</h5><p class="card-text fs-4" id="stats-total-alunos">0</p></div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3 mb-3">
+                <div class="card text-white bg-info h-100">
+                    <div class="card-body"><h5 class="card-title">Total de Turmas</h5><p class="card-text fs-4" id="stats-total-turmas">0</p></div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3 mb-3">
+                <div class="card text-white bg-success h-100">
+                    <div class="card-body"><h5 class="card-title">Presentes</h5><p class="card-text fs-4" id="stats-presentes">0</p></div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3 mb-3">
+                <div class="card text-white bg-danger h-100">
+                    <div class="card-body"><h5 class="card-title">Ausentes</h5><p class="card-text fs-4" id="stats-ausentes">0</p></div>
+                </div>
+            </div>
+        </div>
+        <div class="row mb-4"><div class="col-md-6 offset-md-3"><canvas id="presenceChart"></canvas></div></div>
+
+        <h2 class="mb-3">Detalhes por Turma</h2>
+        
+        {% if user_role == 'professor' %}
+        <div id="filter-bar" class="mb-3 p-3 border rounded bg-light">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label for="filterTurma" class="form-label">Turma:</label>
+                    <select id="filterTurma" class="form-select">
+                        <option value="">Todas</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="filterNameRa" class="form-label">Nome/RA:</label>
+                    <input type="text" id="filterNameRa" class="form-control" placeholder="Buscar por nome ou RA">
+                </div>
+                <div class="col-md-4">
+                    <label for="filterStatus" class="form-label">Status:</label>
+                    <select id="filterStatus" class="form-select">
+                        <option value="">Todos</option>
+                        <option value="Presente">Presente</option>
+                        <option value="Ausente">Ausente</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls mb-3">
+            <button id="printButton" class="btn btn-secondary me-2">Imprimir</button>
+            <button id="exportCsvButton" class="btn btn-success me-2">Exportar CSV</button>
+            <button id="saveButton" class="btn btn-info me-2">Salvar Alterações</button>
+            <button id="repopulateDbButton" class="btn btn-danger">Repopular Banco de Dados</button>
+        </div>
+        {% endif %}
+
+        <ul class="nav nav-tabs" id="turmaTabs" role="tablist">
+        </ul>
+        <div class="tab-content" id="turmaTabContent">
+            <div class="alert alert-warning mt-3" role="alert" id="no-students-alert" style="display: none;">
+                Nenhum aluno encontrado no banco de dados.
+            </div>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/index.js') }}"></script>
+</body>
+</html>

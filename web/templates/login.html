@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Sistema de Presença</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+    <style>
+        
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1 class="h3 mb-3 fw-normal text-center">Por favor, faça login</h1>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form class="form-signin" method="POST" action="{{ url_for('login') }}">
+            <div class="form-floating">
+                <input type="text" class="form-control" id="username" name="username" placeholder="Nome de usuário" required autofocus>
+                <label for="username">Nome de usuário</label>
+            </div>
+            <div class="form-floating">
+                <input type="password" class="form-control" id="password" name="password" placeholder="Senha" required>
+                <label for="password">Senha</label>
+            </div>
+
+            <button class="w-100 btn btn-lg btn-primary" type="submit">Entrar</button>
+        </form>
+        <p class="mt-3 text-center">
+            <a href="{{ url_for('index') }}">Voltar para a página de apresentação</a>
+        </p>
+    </div>
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+</body>
+</html>

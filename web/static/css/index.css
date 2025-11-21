@@ -1,0 +1,21 @@
+body {
+    background-color: #f8f9fa;
+}
+.container {
+    padding-top: 2rem;
+}
+.table {
+    background-color: #ffffff;
+}
+.status-Presente {
+    color: green;
+    font-weight: bold;
+}
+.status-Ausente {
+    color: red;
+    font-weight: bold;
+}
+.timestamp {
+    font-size: 0.9em;
+    color: #6c757d;
+}

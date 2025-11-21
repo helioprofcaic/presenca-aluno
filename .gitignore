@@ -1,0 +1,35 @@
+# Ambiente Virtual
+.venv/
+venv/
+
+# Banco de Dados
+# O banco de dados é gerado localmente e não deve ser versionado.
+*.db
+*.sqlite3
+
+# Arquivos de dados JSON
+# Ignora todos os arquivos JSON dentro da pasta 'data/',
+# exceto o arquivo que define a estrutura das turmas.
+data/*.json
+!data/turmas-com-disciplinas.json
+
+# Arquivo CSV legado
+# Este arquivo não é mais o banco de dados principal.
+alunos.csv
+
+# Cache e arquivos compilados do Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Arquivos gerados pela aplicação
+# A pasta 'qrcodes' armazena imagens geradas dinamicamente.
+qrcodes/
+
+# Arquivos de configuração de IDEs e editores
+.vscode/
+.idea/
+
+# Arquivos de sistema operacional
+.DS_Store
