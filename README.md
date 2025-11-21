@@ -32,6 +32,14 @@ Para guias detalhados sobre funcionalidades, uso, desenvolvimento e solução de
   - Perfis de acesso (`admin`, `professor`, `aluno`, `visitante`) com diferentes níveis de permissão.
   - Gerenciamento de usuários para administradores.
 
+## 🤝 Colaboradores e Agradecimentos
+
+Este projeto foi desenvolvido com a valiosa colaboração dos alunos do curso **Técnico em Desenvolvimento de Sistemas**.
+
+Ele será apresentado como um projeto prático na **Feira de Profissões**, demonstrando as habilidades e conhecimentos adquiridos durante o curso. Um agradecimento especial a todos os envolvidos por sua dedicação e empenho!
+
+---
+
 ## 🚀 Início Rápido
 
 Siga os passos abaixo para colocar a aplicação para funcionar.
