@@ -9,10 +9,10 @@ Uma solução integrada que combina uma **aplicação de desktop** para registro
 ## 📚 Documentação Completa
 
 Para guias detalhados sobre funcionalidades, uso, desenvolvimento e solução de problemas, por favor, consulte a nossa **documentação na pasta `docs/`**. Lá você encontrará:
-- **Como Usar**: Guia passo a passo para usuários.
-- **Desenvolvimento**: Detalhes técnicos sobre a arquitetura.
-- **Funcionalidades**: Descrição completa de cada recurso.
-- **Solução de Problemas**: Como resolver os erros mais comuns.
+- [**Como Usar**](./docs/Como_usar.md): Guia passo a passo para usuários.
+- [**Desenvolvimento**](./docs/Desenvolvimento.md): Detalhes técnicos sobre a arquitetura.
+- [**Funcionalidades**](./docs/Funcionalidades.md): Descrição completa de cada recurso.
+- [**Solução de Problemas**](./docs/TROUBLESHOOTING.md): Como resolver os erros mais comuns.
 
 ---
 
