@@ -190,7 +190,6 @@ def get_all_students_with_latest_attendance():
     students = cursor.fetchall()
     conn.close()
     student_list = [dict(row) for row in students]
-    print(f"[DEBUG-DB] get_all_students_with_latest_attendance: Encontrados {len(student_list)} registros de alunos.")
     return student_list
 
 

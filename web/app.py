@@ -267,30 +267,21 @@ def get_presence_data():
     Se o usuário logado for um aluno, retorna apenas os seus próprios dados.
     """
     try:
-        print("\n[DEBUG-API] Rota /api/presence_data foi chamada.")
         all_students = db.get_all_students_with_latest_attendance()
-        print(f"[DEBUG-API] Recebidos {len(all_students)} alunos do banco de dados.")
         
         # Adiciona o nome da turma a cada registro de aluno
         for student in all_students:
             # Usa o nome da turma do cache ou o próprio código se não for encontrado
             student['nome_turma'] = CLASS_NAMES.get(student['codigo_turma'], student['codigo_turma'])
 
-        # A conversão para dict já é feita na função do banco de dados.
         students_to_return = all_students
-
         user_role = session.get('role')
-        print(f"[DEBUG-API] Role do usuário na sessão: '{user_role}'.")
-
         if user_role == 'aluno':
             logged_in_ra = session.get('username')
-            print(f"[DEBUG-API] Filtrando dados para o aluno com RA: {logged_in_ra}.")
             students_to_return = [aluno for aluno in students_to_return if aluno['ra'] == logged_in_ra]
             
-        print(f"[DEBUG-API] Retornando {len(students_to_return)} registros de alunos no JSON.")
         return jsonify(students_to_return)
     except Exception as e:        
-        print(f"[DEBUG-API] Retornando {len(students_to_return)} registros de alunos no JSON.")
         print(f"[ERRO-API] Erro ao buscar dados de presença para API: {e}")
         return jsonify({"error": "Erro ao buscar dados de presença"}), 500
 

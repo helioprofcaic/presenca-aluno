@@ -14,6 +14,7 @@ Para guias detalhados sobre funcionalidades, uso, desenvolvimento e solução de
 - [**Como Usar**](./docs/Como_usar.md): Guia passo a passo para usuários.
 - [**Desenvolvimento**](./docs/Desenvolvimento.md): Detalhes técnicos sobre a arquitetura.
 - [**Funcionalidades**](./docs/Funcionalidades.md): Descrição completa de cada recurso.
+- [**Guia de Build**](./docs/BUILD.md): Como gerar um executável para distribuição.
 - [**Solução de Problemas**](./docs/TROUBLESHOOTING.md): Como resolver os erros mais comuns.
 
 ---
