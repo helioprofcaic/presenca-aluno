@@ -88,6 +88,7 @@ A aplicação desktop é dividida em abas para facilitar o uso:
 - **Aba "Ler QR Code"**: Aponte o QR Code do aluno para a câmera para registrar a presença.
 - **Aba "Cadastrar Aluno"**: Preencha o formulário para adicionar um novo aluno.
 - **Aba "Importar / Exportar"**: Importe alunos de arquivos `.json` e gerencie usuários.
+- **Aba "Importar / Exportar"**: Importe turmas inteiras de alunos a partir de arquivos `.json`. Ao fazer isso, cada aluno também se torna um usuário do sistema web, podendo logar com seu RA.
 
 Para um guia detalhado de como realizar cada uma dessas ações, consulte o **[Manual do Usuário](./docs/Como_usar.md)**.
 

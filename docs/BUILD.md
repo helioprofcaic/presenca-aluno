@@ -20,9 +20,15 @@ O processo de build é feito através de um único comando no terminal, executad
 
 Abra seu terminal na raiz do projeto e execute o seguinte comando:
 
+**Comando de Build (Opção Recomendada: Linha Única)**
+
+Copie e cole o comando abaixo em seu terminal. Ele é longo, mas é a forma mais garantida de funcionar em todos os terminais, incluindo o PowerShell.
+
 ```bash
-pyinstaller --name PresencaAluno --onefile --windowed --add-data "data;data" --add-data "web;web" run.py
+pyinstaller --name PresencaAluno --onefile --windowed --add-data "data;data" --add-data "web;web" --add-binary ".venv/Lib/site-packages/pyzbar/libiconv.dll;pyzbar" --add-binary ".venv/Lib/site-packages/pyzbar/libzbar-64.dll;pyzbar" run.py
 ```
+<!-- pyinstaller --name PresencaAluno --onefile --windowed --add-data "data;data" --add-data "web;web" --add-binary ".venv/Lib/site-packages/pyzbar/libiconv.dll;pyzbar" --add-binary ".venv/Lib/site-packages/pyzbar/libzbar-64.dll;pyzbar" run.py -->
+
 
 ### Passo 2: Entendendo o Comando
 

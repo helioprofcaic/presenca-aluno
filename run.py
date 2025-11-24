@@ -11,6 +11,8 @@ import threading
 import os
 import sys
 import json
+import webbrowser
+import time
 from pathlib import Path
 import database as db # Importa o módulo de banco de dados
 
@@ -110,6 +112,12 @@ if __name__ == "__main__":
     # Configura e inicia o servidor web em uma thread separada
     web_thread = threading.Thread(target=run_web_server, daemon=True)
     web_thread.start()
+    
+    # Aguarda um momento para o servidor web iniciar e abre o navegador na página inicial.
+    web_url = "http://127.0.0.1:5000"
+    print(f"Aguardando o servidor web e abrindo o navegador em {web_url}...")
+    time.sleep(2)  # Dá 2 segundos para o servidor Flask inicializar completamente.
+    webbrowser.open(web_url)
     
     # Inicia a aplicação desktop na thread principal
     run_desktop_app()

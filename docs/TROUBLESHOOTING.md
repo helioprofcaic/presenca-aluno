@@ -129,4 +129,34 @@ A solução é forçar o OpenCV a usar um backend mais moderno e estável, o `MS
     ```
 
 Essa pequena alteração instrui o OpenCV a usar um método de comunicação diferente com a câmera, resolvendo a maioria dos problemas de inicialização e travamento no Windows.
+
+## 5. Erro: Falha ao iniciar com DLLs faltando (MSVCP140.dll, VCRUNTIME140.dll)
+
+### Sintomas
+
+Ao tentar executar o `PresencaAluno.exe` em uma máquina nova (que nunca teve ambientes de desenvolvimento instalados), a aplicação não abre e pode exibir um erro do Windows informando que `VCRUNTIME140.dll`, `MSVCP140.dll` ou outra DLL similar não foi encontrada.
+
+### Causa
+
+Algumas das bibliotecas que o projeto utiliza (como o OpenCV, para a câmera) são construídas com o Microsoft Visual C++ e dependem de suas bibliotecas de tempo de execução (runtime). Se essas bibliotecas não estiverem instaladas no sistema operacional, a aplicação não consegue iniciar.
+
+### Solução
+
+A solução é instalar o pacote **Microsoft Visual C++ Redistributable for Visual Studio 2015, 2017, 2019, and 2022**.
+
+1.  **Baixe o Instalador:**
+    - **Opção 1 (Recomendado - Link Oficial):** Baixe a versão mais recente diretamente da página oficial da Microsoft. Você precisará do arquivo para a arquitetura **X64**.
+    - **Opção 2 (Link do Repositório):** Você pode baixar o arquivo `vcredist_x64.exe` diretamente da pasta `utils` deste projeto no GitHub. **(Nota: Substitua `<SEU_USUARIO>` e `<SEU_REPOSITORIO>` pela URL correta do seu projeto)**.
+      ```
+      https://github.com/helioprofcaic/presenca-aluno/raw/main/utils/vcredist_x64.exe
+      ```
+
+2.  **Execute o Instalador:**
+    - Execute o arquivo `vcredist_x64.exe` que você baixou.
+    - Siga as instruções na tela para concluir a instalação.
+
+3.  **Reinicie o Computador:**
+    - Após a instalação, é recomendado reiniciar o computador para garantir que as bibliotecas sejam registradas corretamente no sistema.
+
+Depois disso, a aplicação `PresencaAluno.exe` deverá iniciar normalmente.
 ```

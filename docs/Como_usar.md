@@ -43,9 +43,13 @@ Permite criar contas de acesso para a interface web.
 
 ### Importar em Lote (Aba "Importar / Exportar")
 
-Para adicionar muitos alunos de uma vez:
-1.  **Prepare os arquivos**: Crie arquivos `.json` na pasta `data/`, onde cada arquivo representa uma turma (ex: `294815.json`). O conteúdo deve ser uma lista de alunos com "nome" e "ra".
-2.  **Execute**: Na aplicação desktop, clique no botão **"Importar Alunos de JSON"**. O sistema cadastrará os alunos e gerará todos os QR Codes na pasta `qrcodes/`.
+Esta é a forma mais eficiente de cadastrar turmas inteiras.
+1.  **Execute a Importação**: Na aplicação desktop, vá para a aba **"Importar / Exportar"** e clique no botão **"Importar Alunos de JSON"**.
+2.  **Selecione os Arquivos**: Uma janela do seu sistema operacional será aberta. Navegue até a pasta onde estão seus arquivos `.json` e selecione um ou mais arquivos de turma para importar. O nome do arquivo (sem a extensão `.json`) deve ser o código da turma (ex: `294815.json`).
+3.  **Processo Automático**: O sistema irá:
+    - Cadastrar todos os novos alunos no banco de dados.
+    - Gerar os QR Codes para cada aluno na pasta `qrcodes/`.
+    - **Criar uma conta de usuário para cada aluno**, permitindo que eles acessem a interface web. O nome de usuário e a senha padrão serão o **RA** do aluno.
 
 ## 4. Benefícios do Sistema Integrado
 

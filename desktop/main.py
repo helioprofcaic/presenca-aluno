@@ -18,14 +18,23 @@ from desktop.page_create import PaginaCadastro
 from desktop.page_user_create import PaginaCadastroUsuario
 
 
+# =============================================================================
+# --- CLASSE PRINCIPAL DA APLICAÇÃO DESKTOP ---
+# =============================================================================
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
+        # --- Configurações Iniciais da Janela ---
         self.title("Sistema de Presença de Alunos")
-        self.geometry("900x720")
+        
+        # Define a geometria da janela para ocupar o lado esquerdo da tela.
+        # Formato: "larguraxaltura+posicao_x+posicao_y"
+        self.geometry("900x720+0+0") 
+
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
+        # --- Criação e Configuração do Sistema de Abas (Tabs) ---
         self.tab_view = ctk.CTkTabview(self)
         self.tab_view.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
         self.tab_view.add("Apresentação")
@@ -35,6 +44,7 @@ class App(ctk.CTk):
         self.tab_view.add("Importar / Exportar")
         self.tab_view.set("Apresentação")
 
+        # --- Inicialização de Widgets e Variáveis de Controle ---
         # Placeholders for widgets that need to be accessed from other methods
         self.web_qr_label = None
         self.web_url_label = None
@@ -46,24 +56,31 @@ class App(ctk.CTk):
         self.setup_cadastrar_usuario_tab()
         self.setup_importar_exportar_tab()
         
+        # Cooldown para evitar leituras de QR code repetidas rapidamente
         self.last_qr_time = 0
         self.qr_cooldown = 3  # Increased cooldown
 
+        # Variáveis para controle da câmera e multithreading
         self.cap = None
         self.running = False
         self.queue = queue.Queue(maxsize=1)
         self.thread = None
 
+        # --- Associações de Eventos (Bindings) ---
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.tab_view.configure(command=self.on_tab_change)
         
         self.on_tab_change()
 
+        # --- Carregamento de Dados Iniciais ---
         self.class_codes = {}
         self.load_class_data()
         
         self.logged_in_user_token = None # Store token after professor login
 
+    # =============================================================================
+    # --- UTILITÁRIOS DE REDE E IMAGEM ---
+    # =============================================================================
     def get_local_ip(self):
         """Tries to get the local IP address of the machine."""
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -89,6 +106,9 @@ class App(ctk.CTk):
         img = img.resize((size, size), Image.Resampling.LANCZOS)
         return ctk.CTkImage(light_image=img, size=(size, size))
 
+    # =============================================================================
+    # --- CONFIGURAÇÃO DAS ABAS DA INTERFACE ---
+    # =============================================================================
     def setup_apresentacao_tab(self):
         tab = self.tab_view.tab("Apresentação")
         tab.grid_columnconfigure(0, weight=1)
@@ -164,13 +184,20 @@ class App(ctk.CTk):
         self.import_status_label = ctk.CTkLabel(tab, text="", font=ctk.CTkFont(size=14))
         self.import_status_label.grid(row=1, column=0, padx=20, pady=10)
 
+    # =============================================================================
+    # --- GERENCIAMENTO DE EVENTOS E ESTADO DA APLICAÇÃO ---
+    # =============================================================================
     def on_tab_change(self):
+        """Callback executado ao trocar de aba para iniciar ou parar a câmera."""
         selected_tab = self.tab_view.get()
         if selected_tab == "Ler QR Code":
             self.start_video()
         else:
             self.stop_video()
 
+    # =============================================================================
+    # --- LÓGICA DE CAPTURA DE VÍDEO (MULTITHREADING) ---
+    # =============================================================================
     def start_video(self):
         if not self.running:
             # A inicialização da câmera foi movida para a thread para não travar a GUI.
@@ -262,6 +289,9 @@ class App(ctk.CTk):
             # Garante que o loop de atualização da GUI continue
             self.after(20, self.update_gui)
 
+    # =============================================================================
+    # --- PROCESSAMENTO DE DADOS E LÓGICA DE NEGÓCIO ---
+    # =============================================================================
     def _process_qr_in_thread(self, ra):
         """
         Processa o QR code em uma thread separada para não bloquear a interface.
@@ -313,6 +343,7 @@ class App(ctk.CTk):
             self.status_label.configure(text=f"Erro inesperado: {e}", text_color="red")
 
     def update_mobile_login_qr(self):
+        """Atualiza o QR Code da aba 'Apresentação' para um QR de login de professor."""
         if not self.logged_in_user_token:
             return
 
@@ -331,20 +362,33 @@ class App(ctk.CTk):
                 self.web_url_label.configure(text=f"Erro ao gerar QR Code de login móvel: {e}")
 
     def reset_status_label(self):
+        """Reseta a label de status para a mensagem padrão."""
         self.status_label.configure(text="Aguardando leitura...", text_color=self.status_label.cget("text_color_disabled"))
 
     def import_students_from_json(self):
-        data_dir = Path("data")
-        if not data_dir.exists():
-            self.import_status_label.configure(text="Erro: Pasta 'data' não encontrada.", text_color="red")
+        """
+        Abre uma janela para o usuário selecionar arquivos JSON e os importa.
+        """
+        # Abre a janela de diálogo para selecionar um ou mais arquivos JSON
+        filepaths = ctk.filedialog.askopenfilenames(
+            title="Selecione os arquivos JSON das turmas",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
+        )
+
+        # Se o usuário cancelar a seleção, não faz nada
+        if not filepaths:
+            self.import_status_label.configure(text="Importação cancelada.", text_color="orange")
             return
+
         qrcodes_dir = Path("qrcodes")
         qrcodes_dir.mkdir(exist_ok=True)
         imported_count = 0
         updated_count = 0
         errors = []
-        for json_file in data_dir.glob("*.json"):
-            if json_file.name == "turmas-com-disciplinas.json":
+
+        for filepath in filepaths:
+            json_file = Path(filepath)
+            if json_file.name == "turmas-com-disciplinas.json": # Pula o arquivo de configuração de turmas
                 continue
             codigo_turma_from_file = json_file.stem
             try:
@@ -366,6 +410,11 @@ class App(ctk.CTk):
                         if existing_student['codigo_turma'] != codigo_turma_from_file:
                             db.update_student(ra, {'codigo_turma': codigo_turma_from_file, 'inep': inep}) # Função de update genérica seria ideal
                         updated_count += 1
+                    
+                    # **NOVO**: Garante que um usuário seja criado para o aluno poder logar na web.
+                    # O RA será o usuário e a senha padrão. A função add_user já evita duplicatas.
+                    db.add_user(ra, ra, "aluno")
+
                     qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
                     qr.add_data(ra)
                     qr.make(fit=True)
@@ -385,13 +434,21 @@ class App(ctk.CTk):
         else:
             self.import_status_label.configure(text=status_message, text_color="green")
 
+    # =============================================================================
+    # --- FINALIZAÇÃO DA APLICAÇÃO ---
+    # =============================================================================
     def on_closing(self):
+        """Callback para garantir que a câmera seja liberada ao fechar a janela."""
         self.stop_video()
         self.destroy()
 
+# =============================================================================
+# --- PONTO DE ENTRADA DA APLICAÇÃO DESKTOP ---
+# =============================================================================
 def start_desktop_app():
     app = App()
     app.mainloop()
 
 if __name__ == "__main__":
+    # Inicia a aplicação se o script for executado diretamente.
     start_desktop_app()
