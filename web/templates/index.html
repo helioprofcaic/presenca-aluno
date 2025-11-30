@@ -111,8 +111,9 @@
         </div>
 
         <div class="controls mb-3">
-            <button id="printButton" class="btn btn-secondary me-2">Imprimir</button>
+            <button id="printButton" class="btn btn-secondary me-2">Imprimir Lista</button>
             <button id="exportCsvButton" class="btn btn-success me-2">Exportar CSV</button>
+            <button id="printQrCodesButton" class="btn btn-primary me-2">Imprimir QR Codes da Turma</button>
             <button id="saveButton" class="btn btn-info me-2">Salvar Alterações</button>
             <button id="repopulateDbButton" class="btn btn-danger">Repopular Banco de Dados</button>
         </div>
@@ -126,8 +127,26 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal para exibir QR Code individual -->
+    <div class="modal fade" id="qrCodeModal" tabindex="-1" aria-labelledby="qrCodeModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="qrCodeModalLabel">QR Code do Aluno</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <p id="qr-modal-student-name" class="fs-5"></p>
+                    <div id="qr-code-container" class="mb-3"></div>
+                    <p><small class="text-muted" id="qr-modal-student-ra"></small></p>
+                </div>
+            </div>
+        </div>
+    </div>
     
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/qrcode.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/index.js') }}"></script>
 </body>
 </html>

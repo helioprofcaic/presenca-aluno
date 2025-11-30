@@ -3,7 +3,7 @@ import os
 from functools import wraps
 import json
 from flask import Flask, render_template, abort, jsonify, request, session, redirect, url_for, flash
-from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadTimeSignature
+from flask.helpers import send_from_directory
 import database as db
 
 # ==============================================================================
@@ -32,10 +32,6 @@ try:
     print("Nomes das turmas carregados com sucesso.")
 except Exception as e:
     print(f"AVISO: Não foi possível carregar os nomes das turmas do arquivo JSON. Erro: {e}")
-
-
-# Cria um serializador para gerar tokens seguros com tempo de expiração.
-token_serializer = URLSafeTimedSerializer(app.secret_key)
 
 
 # ==============================================================================
@@ -103,39 +99,6 @@ def login():
         else:
             flash('Nome de usuário ou senha inválidos.', 'danger')
     return render_template('login.html')
-
-@app.route('/login-with-token')
-def login_with_token():
-    """
-    Endpoint para fazer login usando um token seguro (geralmente de um QR code).
-    O token é validado (assinatura e tempo de expiração de 1 minuto).
-    """
-    token = request.args.get('token')
-    if not token:
-        flash('Token de login ausente.', 'danger')
-        return redirect(url_for('login'))
-
-    try:
-        # Valida o token com um tempo de expiração de 60 segundos.
-        ra = token_serializer.loads(token, max_age=60)
-        user = db.get_user_by_username(ra)
-        if user:
-            session['username'] = user['username']
-            session['role'] = user['role']
-            flash('Login via QR Code realizado com sucesso!', 'success')
-            return redirect(url_for('index'))
-        else:
-            flash('Usuário do token não encontrado.', 'danger')
-            return redirect(url_for('login'))
-    except SignatureExpired:
-        flash('O token de login expirou. Por favor, tente novamente.', 'danger')
-        return redirect(url_for('login'))
-    except BadTimeSignature:
-        flash('Token de login inválido.', 'danger')
-        return redirect(url_for('login'))
-    except Exception as e:
-        flash(f'Ocorreu um erro durante o login com token: {e}', 'danger')
-        return redirect(url_for('login'))
 
 @app.route('/logout')
 def logout():
@@ -232,34 +195,6 @@ def student_history(ra):
 # --- ENDPOINTS DE API (PARA COMUNICAÇÃO COM O FRONTEND) ---
 # ==============================================================================
 
-@app.route('/api/generate-login-token', methods=['POST'])
-def generate_login_token():
-    """
-    Gera um token de login para um usuário se ele for um professor.
-    Usado pela aplicação desktop para permitir o login via QR code.
-    """
-    data = request.get_json()
-    if not data or 'ra' not in data:
-        return jsonify({"error": "RA do usuário não fornecido."}), 400
-
-    ra = data['ra']
-    user = db.get_user_by_username(ra)
-
-    if user and user['role'] == 'professor':
-        # Gera um token que expira em 1 minuto.
-        token = token_serializer.dumps(ra)
-        return jsonify({"token": token, "role": "professor", "nome": user['username']})
-    elif user:
-        # Se for um usuário, mas não professor, informa o role.
-        return jsonify({"role": "aluno", "nome": user['username']})
-    else:
-        # Se não for um usuário, verifica se é um aluno para dar a presença.
-        student = db.get_student_by_identifier(ra)
-        if student:
-            return jsonify({"role": "aluno", "nome": student['nome']})
-        else:
-            return jsonify({"error": "Usuário ou aluno não encontrado."}), 404
-
 @app.route('/api/presence_data', methods=['GET'])
 def get_presence_data():
     """
@@ -305,6 +240,18 @@ def repopulate_students():
         }), 200
     except Exception as e:
         return jsonify({"error": f"Ocorreu um erro grave: {e}"}), 500
+
+@app.route('/qrcodes/<path:filename>')
+def serve_qrcode(filename):
+    """
+    Serve um arquivo de QR Code do diretório raiz 'qrcodes'.
+    Esta rota é essencial para que a interface web possa exibir as imagens
+    sem que elas precisem estar dentro da pasta 'static'.
+    """
+    # Constrói o caminho para o diretório 'qrcodes' que está um nível acima do diretório 'web'
+    qrcodes_dir = os.path.join(app.root_path, '..', 'qrcodes')
+    # Usa send_from_directory para servir o arquivo de forma segura
+    return send_from_directory(qrcodes_dir, filename)
 
 
 # ==============================================================================

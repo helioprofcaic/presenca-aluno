@@ -144,7 +144,7 @@ def get_student_by_ra(ra):
     cursor.execute("SELECT * FROM alunos WHERE ra = ?", (ra,))
     student = cursor.fetchone()
     conn.close()
-    return student
+    return dict(student) if student else None
 
 def get_student_by_identifier(identifier):
     """Busca um aluno pelo RA ou pelo INEP."""
@@ -223,16 +223,14 @@ def get_all_students_with_latest_attendance():
         a.nome,
         a.codigo_turma,
         CASE
-            -- Cenário ideal: Entrada e Saída corretas
-            WHEN entrada.id IS NOT NULL AND saida.id IS NOT NULL AND TIME(entrada.timestamp) <= '{fim_entrada_tolerancia}' AND TIME(saida.timestamp) >= '{inicio_saida_tolerancia}' THEN 'Presente'
+            -- Se há registro de entrada, o aluno não está mais ausente.
+            WHEN entrada.id IS NOT NULL AND saida.id IS NULL THEN 'Apenas Entrada'
             -- Saída antecipada
             WHEN entrada.id IS NOT NULL AND saida.id IS NOT NULL AND TIME(saida.timestamp) < '{inicio_saida_tolerancia}' THEN 'Saída Antecipada'
             -- Chegou atrasado, mas saiu no horário
             WHEN entrada.id IS NOT NULL AND saida.id IS NOT NULL AND TIME(entrada.timestamp) > '{fim_entrada_tolerancia}' THEN 'Atraso'
-            -- Apenas entrou, mas ainda não deu o horário de saída
-            WHEN entrada.id IS NOT NULL AND saida.id IS NULL AND TIME('now', 'localtime') < '{inicio_saida_tolerancia}' THEN 'Apenas Entrada'
-            -- Apenas entrou, mas já passou do horário de saída (esqueceu de registrar saída)
-            WHEN entrada.id IS NOT NULL AND saida.id IS NULL AND TIME('now', 'localtime') >= '{inicio_saida_tolerancia}' THEN 'Presente (Incompleto)'
+            -- Cenário ideal: Entrada e Saída corretas
+            WHEN entrada.id IS NOT NULL AND saida.id IS NOT NULL THEN 'Presente'
             ELSE 'Ausente'
         END as status_presenca,
         entrada.timestamp as timestamp_entrada,
@@ -267,7 +265,7 @@ def get_student_attendance_history_by_id(aluno_id):
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT timestamp, status FROM presenca WHERE aluno_id = ? ORDER BY timestamp DESC",
+        "SELECT timestamp, tipo_registro FROM presenca WHERE aluno_id = ? ORDER BY timestamp DESC",
         (aluno_id,)
     )
     history = cursor.fetchall()
@@ -280,7 +278,7 @@ def get_student_attendance_history_by_ra(ra):
     if not student:
         return None, None
     history = get_student_attendance_history_by_id(student['id'])
-    return student, history
+    return dict(student), [dict(h) for h in history]
 
 
 def update_student_class(ra, codigo_turma):

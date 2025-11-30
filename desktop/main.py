@@ -296,51 +296,29 @@ class App(ctk.CTk):
         """
         Processa o QR code em uma thread separada para não bloquear a interface.
         """
-        api_url = "http://127.0.0.1:5000/api/generate-login-token"
         try:
-            response = requests.post(api_url, json={"ra": ra})
-            if response.status_code == 200:
-                data = response.json()
-                role = data.get("role")
-                nome = data.get("nome", "Desconhecido")
-
-                if role == "professor" and "token" in data:
-                    self.logged_in_user_token = data["token"]
-                    self.status_label.configure(text=f"Login de Professor: {nome}", text_color="cyan")
-                    login_url = f"http://127.0.0.1:5000/login-with-token?token={self.logged_in_user_token}"
-                    webbrowser.open(login_url)
-                    self.update_mobile_login_qr()
-                    self.tab_view.set("Apresentação")
-
-                elif role == "aluno":
-                    # AQUI ESTÁ A MUDANÇA PRINCIPAL:
-                    # Busca o aluno pelo identificador do QR Code, que pode ser RA ou INEP.
-                    student = db.get_student_by_identifier(ra)
-                    if student:
-                        tipo_registro, status_detalhado = db.add_attendance_record(student['id'])
-                        if tipo_registro:
-                            feedback_msg = f"{status_detalhado}: {student['nome']}"
-                            self.status_label.configure(text=feedback_msg, text_color="green")
-                        else:
-                            self.status_label.configure(text=f"Fora do horário de registro para {student['nome']}", text_color="orange")
-                    else:
-                        # Se não encontrou pelo identificador, verifica se é um usuário com perfil de aluno para dar um feedback melhor.
-                        user = db.get_user_by_username(ra)
-                        if user and user['role'] == 'aluno':
-                             self.status_label.configure(text=f"Presença Confirmada: {user['username']}", text_color="green")
-                        else:
-                            self.status_label.configure(text=f"Aluno não encontrado (RA/INEP): {ra}", text_color="red")
+            # 1. Tenta encontrar um aluno pelo RA/INEP lido do QR Code
+            student = db.get_student_by_identifier(ra)
+            if student:
+                # Se encontrou o aluno, registra a presença
+                tipo_registro, status_detalhado = db.add_attendance_record(student['id'])
+                if tipo_registro:
+                    feedback_msg = f"{status_detalhado}: {student['nome']}"
+                    self.status_label.configure(text=feedback_msg, text_color="green")
                 else:
-                    self.status_label.configure(text=f"Usuário '{nome}' não é professor.", text_color="orange")
-            elif response.status_code == 404:
-                self.status_label.configure(text=f"Usuário ou Aluno não encontrado: {ra}", text_color="red")
+                    self.status_label.configure(text=f"Fora do horário de registro para {student['nome']}", text_color="orange")
             else:
-                self.status_label.configure(text=f"Erro na API: {response.status_code}", text_color="red")
-
-        except requests.exceptions.ConnectionError:
-            self.status_label.configure(text="Erro: Não foi possível conectar ao servidor web.", text_color="red")
+                # 2. Se não encontrou um aluno, verifica se é um usuário (professor/admin)
+                user = db.get_user_by_username(ra)
+                if user and user['role'] in ['professor', 'admin']:
+                    # Lógica futura para login de professor pode ser adicionada aqui
+                    self.status_label.configure(text=f"QR Code de usuário: {user['username']}", text_color="cyan")
+                else:
+                    # 3. Se não for nem aluno nem usuário, o QR Code é inválido
+                    self.status_label.configure(text=f"QR Code não reconhecido: {ra}", text_color="red")
+        
         except Exception as e:
-            self.status_label.configure(text=f"Erro inesperado: {e}", text_color="red")
+            self.status_label.configure(text=f"Erro ao processar QR Code: {e}", text_color="red")
 
     def update_mobile_login_qr(self):
         """Atualiza o QR Code da aba 'Apresentação' para um QR de login de professor."""

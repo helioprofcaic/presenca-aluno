@@ -16,7 +16,9 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
-                    <a class="nav-link" href="{{ url_for('index') }}">Voltar ao Início</a>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('index') }}">Voltar ao Início</a>
+                    </li>
                 </ul>
                 <ul class="navbar-nav ms-auto">
                     {% if session.username %}
@@ -58,22 +60,22 @@
             <div class="card-body">
                 <form method="POST" action="{{ url_for('manage_users') }}">
                     <input type="hidden" name="action" value="add">
-                    <div class="row g-3">
-                        <div class="col-md-4">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md">
                             <input type="text" name="username" class="form-control" placeholder="Nome de usuário" required>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md">
                             <input type="password" name="password" class="form-control" placeholder="Senha" required>
                         </div>
-                        <div class="col-md-3">
-                            <select name="role" class="form-select" required>
+                        <div class="col-md">
+                            <select name="role" class="form-select" required title="Função do Usuário">
                                 <option value="aluno">Aluno</option>
                                 <option value="professor">Professor</option>
                                 <option value="visitante">Visitante</option>
                                 <option value="admin">Admin</option>
                             </select>
                         </div>
-                        <div class="col-md-1">
+                        <div class="col-md-auto">
                             <button type="submit" class="btn btn-primary w-100">Adicionar</button>
                         </div>
                     </div>

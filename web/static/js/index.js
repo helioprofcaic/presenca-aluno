@@ -254,7 +254,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                             return `
                             <tr>
-                                ${canViewSensitiveData ? `<td data-label="RA"><a href="/aluno/${aluno.ra}">${aluno.ra}</a></td>` : ''}
+                                ${canViewSensitiveData ? `<td data-label="RA"><a href="#" class="qr-code-trigger" data-ra="${aluno.ra}" data-nome="${aluno.nome}">${aluno.ra}</a></td>` : ''}
                                 <td>${aluno.nome}</td>
                                 <td>
                                     <span class="badge ${statusBadgeClass}">
@@ -275,6 +275,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
             isFirstTab = false;
         }
+
+        // Adiciona event listeners aos novos links de RA
+        document.querySelectorAll('.qr-code-trigger').forEach(trigger => {
+            trigger.addEventListener('click', showStudentQrCode);
+        });
     }
 
     // =================================================================
@@ -376,6 +381,91 @@ document.addEventListener('DOMContentLoaded', function () {
         document.body.removeChild(link);
     }
 
+    /**
+     * Abre uma nova janela com os QR Codes de todos os alunos da aba ativa, pronta para impressão.
+     */
+    function printQrCodes() {
+        const activeTabContent = document.querySelector('.tab-pane.active');
+        if (!activeTabContent) {
+            showFlashMessage('Nenhuma turma selecionada para imprimir QR Codes.', 'warning');
+            return;
+        }
+
+        const turmaName = activeTabContent.id.replace('turma-', '').replace(/-/g, ' ');        
+        const rows = activeTabContent.querySelectorAll('tbody tr');
+        const studentsInTurma = [];
+
+        rows.forEach(row => {
+            // Pega o RA do link dentro da primeira célula de dados (td)
+            const raElement = row.querySelector('td[data-label="RA"] a');
+            if (raElement) {
+                const ra = raElement.dataset.ra;
+                // Encontra o aluno correspondente nos dados completos para obter todas as informações
+                const studentData = allStudentsData.find(s => s.ra === ra);
+                if (studentData) {
+                    studentsInTurma.push(studentData);
+                }
+            }
+        });
+
+        if (studentsInTurma.length === 0) {
+            showFlashMessage('Não há alunos nesta turma para imprimir QR Codes.', 'info');
+            return;
+        }
+
+        const printWindow = window.open('', '', 'height=800,width=1000');
+        printWindow.document.write('<html><head><title>QR Codes - Turma ' + turmaName + '</title>');
+        printWindow.document.write('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">');
+        printWindow.document.write(`
+            <style>
+                body { padding: 20px; }
+                @page {
+                    size: A4;
+                    margin: 20mm;
+                }
+                .qr-card { 
+                    page-break-inside: avoid; 
+                    border: 1px solid #ccc; 
+                    border-radius: 8px; 
+                    padding: 10px; 
+                    margin: 10px; 
+                    width: calc(33.333% - 20px); 
+                    float: left; 
+                    box-sizing: border-box;
+                    text-align: center;
+                }
+                .qr-card img { 
+                    max-width: 150px; 
+                    height: auto; 
+                    margin-bottom: 10px;
+                }
+                .student-name { font-weight: bold; margin-top: 5px; }
+                @media print {
+                    body { -webkit-print-color-adjust: exact; }
+                    .no-print { display: none; }
+                }
+            </style>
+        `);
+        printWindow.document.write('</head><body>');
+        printWindow.document.write(`<h1 class="mb-4">QR Codes para Presença - Turma: ${turmaName}</h1>`);
+        printWindow.document.write('<p class="no-print">Use a função de impressão do seu navegador (Ctrl+P) para imprimir esta página.</p><hr>');
+
+        studentsInTurma.forEach(aluno => {
+            printWindow.document.write(`
+                <div class="qr-card">
+                    <img src="/qrcodes/turma_${aluno.codigo_turma}_ra_${aluno.ra}.png"
+                         alt="QR Code do aluno ${aluno.nome}"
+                         onerror="this.style.display='none'; this.parentElement.innerHTML += '<p class=\\'text-danger\\'>Imagem não encontrada.</p>';">
+                    <div class="student-name">${aluno.nome}</div>
+                    <div class="student-ra text-muted">${aluno.ra}</div>
+                </div>
+            `);
+        });
+
+        printWindow.document.write('</body></html>');
+        printWindow.document.close();
+    }
+
     // Função para imprimir a tabela da aba ativa.
     function printTable() {
         const activeTabContent = document.querySelector('.tab-pane.active');
@@ -416,6 +506,44 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     /**
+     * Exibe um modal com o QR Code de um aluno específico.
+     * @param {Event} event - O evento de clique que acionou a função.
+     */
+    function showStudentQrCode(event) {
+        event.preventDefault();
+        const studentRa = event.target.dataset.ra;
+        const studentName = event.target.dataset.nome;
+
+        // Encontra o aluno nos dados cacheados para obter o código da turma
+        const student = allStudentsData.find(s => s.ra === studentRa);
+        if (!student) {
+            showFlashMessage('Não foi possível encontrar os dados completos do aluno.', 'danger');
+            return;
+        }
+
+        const modal = new bootstrap.Modal(document.getElementById('qrCodeModal'));
+        const qrContainer = document.getElementById('qr-code-container');        
+        
+        // Limpa o QR code anterior
+        qrContainer.innerHTML = '';
+
+        document.getElementById('qr-modal-student-name').textContent = studentName;
+        document.getElementById('qr-modal-student-ra').textContent = `RA: ${studentRa}`;
+
+        // Cria a URL para a imagem do QR Code
+        const qrImageUrl = `/qrcodes/turma_${student.codigo_turma}_ra_${student.ra}.png`;
+
+        // Cria o elemento de imagem e o adiciona ao contêiner
+        const imgElement = document.createElement('img');
+        imgElement.src = qrImageUrl;
+        imgElement.alt = `QR Code para ${studentName}`;
+        imgElement.className = 'img-fluid'; // Garante que a imagem seja responsiva dentro do modal
+        qrContainer.appendChild(imgElement);
+
+        modal.show();
+    }
+
+    /**
      * Envia uma requisição para repopular o banco de dados de alunos.
      * Pede confirmação ao usuário antes de proceder.
      */
@@ -444,7 +572,9 @@ document.addEventListener('DOMContentLoaded', function () {
             showFlashMessage(error.message, 'danger');
         } finally {
             // Recarrega os dados da tabela para refletir as mudanças.
-            fetchPresenceData();
+            const userRole = document.body.dataset.userRole;
+            const apiBaseUrl = document.body.dataset.apiBaseUrl;
+            fetchPresenceData(userRole, apiBaseUrl);
         }
     }
 
@@ -482,6 +612,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const exportCsvButton = document.getElementById('exportCsvButton');
     if (exportCsvButton) {
         exportCsvButton.addEventListener('click', exportToCsv);
+    }
+    const printQrCodesButton = document.getElementById('printQrCodesButton');
+    if (printQrCodesButton) {
+        printQrCodesButton.addEventListener('click', printQrCodes);
     }
     const saveButton = document.getElementById('saveButton');
     if (saveButton) {
