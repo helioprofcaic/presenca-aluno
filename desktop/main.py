@@ -61,11 +61,13 @@ class App(ctk.CTk):
         self.qr_cooldown = 3  # Increased cooldown
 
         # Variáveis para controle da câmera e multithreading
-        self.cap = None
-        self.running = False
+        self.cap = None # Objeto da câmera
+        self.camera_running = False # Controla se a câmera está ativamente lendo frames
+        self.camera_thread = None # Thread que gerencia a câmera
         self.queue = queue.Queue(maxsize=1)
-        self.thread = None
 
+        # Inicia a câmera em segundo plano para uma abertura mais rápida depois
+        self.pre_initialize_camera()
         # --- Associações de Eventos (Bindings) ---
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.tab_view.configure(command=self.on_tab_change)
@@ -198,63 +200,65 @@ class App(ctk.CTk):
     # =============================================================================
     # --- LÓGICA DE CAPTURA DE VÍDEO (MULTITHREADING) ---
     # =============================================================================
+    def pre_initialize_camera(self):
+        """Inicializa a câmera em uma thread para que ela abra mais rápido quando for necessária."""
+        if self.camera_thread is None:
+            self.camera_thread = threading.Thread(target=self.video_stream_worker)
+            self.camera_thread.daemon = True
+            self.camera_thread.start()
+
     def start_video(self):
-        if not self.running:
-            # A inicialização da câmera foi movida para a thread para não travar a GUI.
-            self.video_label.configure(text="Iniciando câmera, por favor aguarde...")
-            self.running = True
-            self.thread = threading.Thread(target=self.video_stream_worker)
-            self.thread.daemon = True
-            self.thread.start()
-            # Inicia o loop da GUI que vai esperar por frames da thread.
+        """Ativa a leitura de frames da câmera e inicia a atualização da GUI."""
+        if not self.camera_running:
+            self.camera_running = True
             self.update_gui()
 
     def stop_video(self):
-        if self.running:
-            self.running = False
-            if self.thread is not None:
-                self.thread.join(timeout=1.0)
-                self.thread = None
-            if self.cap is not None:
-                self.cap.release()
-                self.cap = None
-            # Limpa a fila para o caso de haver frames antigos
-            with self.queue.mutex:
-                self.queue.queue.clear()
-            self.video_label.configure(image=None, text="A câmera será iniciada na aba 'Ler QR Code'.")
+        """Desativa a leitura de frames da câmera."""
+        self.camera_running = False
+        self.video_label.configure(image=None, text="A câmera será iniciada na aba 'Ler QR Code'.")
 
     def video_stream_worker(self):
         """Worker que roda em uma thread separada para gerenciar a câmera."""
-        # Força o uso do backend MSMF (Media Foundation) no Windows.
-        # Isso é mais estável que o DSHOW padrão e resolve muitos problemas de inicialização.
-        self.cap = cv2.VideoCapture(0, cv2.CAP_MSMF)
-        
-        if not self.cap.isOpened():
-            # Se a câmera falhar, coloca um 'sinal' de erro na fila.
-            self.queue.put((None, "ERROR_CAM"))
-            return
+        try:
+            # Força o uso do backend MSMF (Media Foundation) no Windows.
+            # Isso é mais estável que o DSHOW padrão e resolve muitos problemas de inicialização.
+            self.cap = cv2.VideoCapture(0, cv2.CAP_MSMF)
+            
+            if not self.cap.isOpened():
+                # Se a câmera falhar, coloca um 'sinal' de erro na fila.
+                self.queue.put((None, "ERROR_CAM"))
+                return
 
-        while self.running:
-            if self.cap is None or not self.cap.isOpened():
-                break
-            ret, frame = self.cap.read()
-            if not ret:
-                time.sleep(0.1)
-                continue
+            while True: # O loop da thread agora é infinito, controlado pelo fechamento do app
+                if self.camera_running: # Só processa se a câmera estiver "ativa"
+                    if self.cap is None or not self.cap.isOpened():
+                        break
+                    ret, frame = self.cap.read()
+                    if not ret:
+                        time.sleep(0.1)
+                        continue
 
-            # Decodifica apenas QR Codes para evitar warnings de outros formatos (ex: PDF417)
-            decoded_objects = decode(frame, symbols=[ZBarSymbol.QRCODE])
-            if decoded_objects:
-                for obj in decoded_objects:
-                    (x, y, w, h) = obj.rect
-                    cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            try:
-                self.queue.put_nowait((frame, decoded_objects))
-            except queue.Full:
-                pass
+                    # Decodifica apenas QR Codes para evitar warnings de outros formatos (ex: PDF417)
+                    decoded_objects = decode(frame, symbols=[ZBarSymbol.QRCODE])
+                    if decoded_objects:
+                        for obj in decoded_objects:
+                            (x, y, w, h) = obj.rect
+                            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                    try:
+                        self.queue.put_nowait((frame, decoded_objects))
+                    except queue.Full:
+                        pass
+                else:
+                    # Se a câmera não estiver em uso, a thread "dorme" para não consumir CPU
+                    time.sleep(0.1)
+        finally:
+            # Garante que a câmera seja liberada se a thread morrer por algum motivo
+            if self.cap is not None:
+                self.cap.release()
 
     def update_gui(self):
-        if not self.running: return
+        if not self.camera_running: return
         try:
             frame, decoded_objects = self.queue.get_nowait()
 
@@ -417,7 +421,11 @@ class App(ctk.CTk):
     # =============================================================================
     def on_closing(self):
         """Callback para garantir que a câmera seja liberada ao fechar a janela."""
-        self.stop_video()
+        self.camera_running = False # Para a leitura de frames
+        if self.camera_thread is not None:
+            # A thread é daemon, então não precisamos de join, mas liberamos a câmera explicitamente
+            if self.cap is not None:
+                self.cap.release()
         self.destroy()
 
 # =============================================================================
